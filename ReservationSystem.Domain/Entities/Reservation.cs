@@ -15,7 +15,7 @@ namespace ReservationSystem.Domain.Entities
         public int Quantity { get; }
         public ReservationStatus Status { get; private set; } //Allows only this object to mutates it
         public DateTimeOffset CreatedAt { get; private set; } //CreatedAt value is set by DB.
-        public DateTimeOffset ExpiresAt { get; } //Set by query?
+        public DateTimeOffset ExpiresAt { get; }
 
         public Reservation(Guid seatCategoryId, int quantity, DateTimeOffset expiresAt)
         {
@@ -35,12 +35,13 @@ namespace ReservationSystem.Domain.Entities
             EnsureNotTerminal();
             Status = ReservationStatus.Confirmed;
         }
+
         public void Cancel()
         {
             EnsureNotTerminal();
             Status = ReservationStatus.Cancelled;
         }
-
+        
         public void EnsureNotTerminal()
         {
             if (Status == ReservationStatus.Confirmed || Status == ReservationStatus.Expired || Status == ReservationStatus.Cancelled)
