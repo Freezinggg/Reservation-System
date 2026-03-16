@@ -1,4 +1,5 @@
-﻿using ReservationSystem.Domain.Entities;
+﻿using ReservationSystem.Application.Records;
+using ReservationSystem.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,5 +11,7 @@ namespace ReservationSystem.Application.Interfaces.Repository
     public interface IReservationRepository
     {
         Task AddAsync(Reservation reservation, CancellationToken ct);
+        Task<List<ExpiredReservartionRecord>> TryExpireReservation(CancellationToken ct);
+
     }
 }

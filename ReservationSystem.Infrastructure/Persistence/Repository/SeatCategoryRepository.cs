@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ReservationSystem.Application.Interfaces.Repository;
+using ReservationSystem.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +13,28 @@ namespace ReservationSystem.Infrastructure.Persistence.Repository
     {
         private readonly AppDbContext _db;
 
-        public SeatCategoryRepository(AppDbContext db) 
-        { 
-            _db = db; 
+        public SeatCategoryRepository(AppDbContext db)
+        {
+            _db = db;
+        }
+
+        public async Task<bool> RestoreSeat(Dictionary<Guid, int> seatCategoryMap, CancellationToken ct)
+        {
+            foreach (var keyValue in seatCategoryMap)
+            {
+                var seatCategoryId = keyValue.Key;
+                var quantity = keyValue.Value;
+
+                var row = await _db.SeatCategories
+                .Where(o => o.Id == seatCategoryId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(o => o.RemainingSeats, o => o.RemainingSeats + quantity)
+                    , ct);
+
+                if (row == 0) return false;
+            }
+
+            return true;
         }
 
         public async Task<bool> TryAllocateSeatAsync(Guid seatCategoryId, int qty, CancellationToken ct)

@@ -9,5 +9,6 @@ namespace ReservationSystem.Application.Interfaces.Repository
     public interface ISeatCategoryRepository
     {
         Task<bool> TryAllocateSeatAsync(Guid seatCategoryId, int qty, CancellationToken ct);
+        Task<bool> RestoreSeat(Dictionary<Guid, int> seatCategoryMap, CancellationToken ct);
     }
 }
