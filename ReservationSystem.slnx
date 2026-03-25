@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Reservation.LoadGenerator/Reservation.LoadGenerator.csproj" Id="5365411c-100a-4a65-9694-e1da44570d9b" />
   <Project Path="ReservationSystem.API/ReservationSystem.API.csproj" />
   <Project Path="ReservationSystem.Application/ReservationSystem.Application.csproj" />
   <Project Path="ReservationSystem.Domain/ReservationSystem.Domain.csproj" />
