@@ -1,5 +1,7 @@
 ﻿using MediatR;
 using ReservationSystem.Application.Common;
+using ReservationSystem.Application.Interfaces.Admission;
+using ReservationSystem.Application.Interfaces.Cache;
 using ReservationSystem.Application.Interfaces.Repository;
 using ReservationSystem.Application.Interfaces.UnitOfWork;
 using ReservationSystem.Domain.Entities;
@@ -18,12 +20,15 @@ namespace ReservationSystem.Application.Handler.CreateReservation
         private readonly IReservationRepository _rsvRepo;
         private readonly ISeatCategoryRepository _seatRepo;
         private readonly IUnitOfWork _uow;
-
-        public CreateReservationHandler(IReservationRepository rsvRepo, ISeatCategoryRepository seatRepo, IUnitOfWork uow)
+        private readonly ISeatCache _seatCache;
+        private readonly ISeatRequestGate _seatRequestGate;
+        public CreateReservationHandler(IReservationRepository rsvRepo, ISeatCategoryRepository seatRepo, IUnitOfWork uow, ISeatCache seatCache, ISeatRequestGate seatRequestGate)
         {
             _rsvRepo = rsvRepo;
             _seatRepo = seatRepo;
             _uow = uow;
+            _seatCache = seatCache;
+            _seatRequestGate = seatRequestGate;
         }
 
         public async Task<Result<Guid>> Handle(CreateReservationCommand request, CancellationToken cancellationToken)
@@ -31,14 +36,49 @@ namespace ReservationSystem.Application.Handler.CreateReservation
             Result<Guid> result = new();
             if (request.Quantity <= 0) return Result<Guid>.Invalid("Quantity cannot be less than 1.");
 
+            //Read cached seat
+            var cachedSeat = await _seatCache.GetRemainingAsync(request.SeatCategoryId);
+
+            if (cachedSeat == null)
+            {
+                // fetch from DB
+                var actualRemainingSeat = await _seatRepo.GetRemainigSeatAsync(request.SeatCategoryId, cancellationToken);
+
+                // populate cache
+                try
+                {
+                    await _seatCache.SetAsync(request.SeatCategoryId, actualRemainingSeat);
+                }
+                catch { }
+
+                cachedSeat = actualRemainingSeat;
+            }
+
+            //Admission here to control how many request can comes in based on cachedseat
+            if (!_seatRequestGate.Allow(cachedSeat))
+            {
+                return Result<Guid>.TooManyRequest("Too many requests.");
+            }
+
             await _uow.BeginAsync(cancellationToken);
             try
             {
                 //Try to allocate seat, if not available return fail and rollback immediately
                 bool seatAvailable = await _seatRepo.TryAllocateSeatAsync(request.SeatCategoryId, request.Quantity, cancellationToken);
-                if (!seatAvailable) {
+                if (!seatAvailable)
+                {
                     await _uow.RollbackAsync(cancellationToken);
-                    return Result<Guid>.Fail("No seat available.");
+
+                    //Wrap cache into trycatch so its a nonblocking opreation
+                    try
+                    {
+                        //Set cachedseat to 0 to reduce incoming request later
+                        await _seatCache.SetZeroAsync(request.SeatCategoryId);
+                    }
+                    catch { }
+                    
+
+                    return Result<Guid>.Conflict("No seat available.");
                 }
 
                 //Create reservation after allocate seat success/available
@@ -48,6 +88,16 @@ namespace ReservationSystem.Application.Handler.CreateReservation
                 await _uow.CommitAsync(cancellationToken);
 
                 result = Result<Guid>.Success(reservation.Id);
+
+
+                //Wrap cache into trycatch so its a nonblocking opreation
+                try
+                {
+                    //Decrease cachedseat
+                    await _seatCache.DecrementAsync(request.SeatCategoryId, request.Quantity);
+                }
+                catch { }
+
             }
             catch (DomainException ex)
             {

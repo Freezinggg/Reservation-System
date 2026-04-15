@@ -18,6 +18,8 @@ namespace ReservationSystem.Application.Common
         public bool IsInvalid => Status == ResultStatus.Invalid;
         public bool IsServiceUnavailable => Status == ResultStatus.ServiceUnavailable;
         public bool IsFail => Status == ResultStatus.Fail;
+        public bool IsTooManyRequest => Status == ResultStatus.TooManyRequests;
+        public bool IsConflict => Status == ResultStatus.Conflict;
 
         public static Result<T> Success(T data) =>
             new() { Status = ResultStatus.Success, Data = data };
@@ -34,6 +36,12 @@ namespace ReservationSystem.Application.Common
             new() { Status = ResultStatus.Invalid, ErrorMessage = message };
         public static Result<T> ServiceUnavailable(string? message = null) =>
             new() { Status = ResultStatus.ServiceUnavailable, ErrorMessage = message };
+
+        public static Result<T> TooManyRequest(string? message = null) =>
+            new() { Status = ResultStatus.TooManyRequests, ErrorMessage = message };
+
+        public static Result<T> Conflict(string? message = null) =>
+            new() { Status = ResultStatus.Conflict, ErrorMessage = message };
     }
 
     public enum ResultStatus : int
@@ -44,5 +52,7 @@ namespace ReservationSystem.Application.Common
         Invalid,
         ServiceUnavailable,
         Fail,
+        TooManyRequests, //429
+        Conflict, //409
     }
 }

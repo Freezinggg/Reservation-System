@@ -10,5 +10,6 @@ namespace ReservationSystem.Application.Interfaces.Repository
     {
         Task<bool> TryAllocateSeatAsync(Guid seatCategoryId, int qty, CancellationToken ct);
         Task<bool> RestoreSeat(Dictionary<Guid, int> seatCategoryMap, CancellationToken ct);
+        Task<int> GetRemainigSeatAsync(Guid seatCategoryId, CancellationToken ct);
     }
 }

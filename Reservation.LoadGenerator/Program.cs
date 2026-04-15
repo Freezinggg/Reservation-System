@@ -12,7 +12,7 @@ namespace Reservation.LoadGenerator
 
             var client = new HttpClient();
 
-            int totalRequests = 50;
+            int totalRequests = 30;
 
             var tasks = new List<Task<HttpResponseMessage>>();
 
@@ -38,10 +38,12 @@ namespace Reservation.LoadGenerator
             // 📊 Analyze results
             int success = responses.Count(r => r.StatusCode == System.Net.HttpStatusCode.Created);
             int conflict = responses.Count(r => r.StatusCode == System.Net.HttpStatusCode.Conflict);
+            int toomanyrequests = responses.Count(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests);
 
             Console.WriteLine($"Total: {totalRequests}");
             Console.WriteLine($"Success (201): {success}");
             Console.WriteLine($"Conflict (409): {conflict}");
+            Console.WriteLine($"TooManyRequests (429): {toomanyrequests}");
             Console.ReadLine();
         }
     }

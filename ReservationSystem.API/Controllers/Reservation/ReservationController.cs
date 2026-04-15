@@ -28,6 +28,8 @@ namespace ReservationSystem.API.Controllers.Reservation
                 ResultStatus.Invalid => BadRequest(ApiResponse<Guid>.Fail(result.ErrorMessage)),
                 ResultStatus.Fail => Conflict(ApiResponse<Guid>.Fail(result.ErrorMessage)),
                 ResultStatus.Error => StatusCode(500, ApiResponse<Guid>.Fail(result.ErrorMessage)),
+                ResultStatus.Conflict => StatusCode(409, ApiResponse<Guid>.Fail(result.ErrorMessage)),
+                ResultStatus.TooManyRequests => StatusCode(429, ApiResponse<Guid>.Fail(result.ErrorMessage)),
                 _ => StatusCode(500, ApiResponse<Guid>.Fail("Unhandled result status")) //default value if ResultStatus is its new or default
             };
         }

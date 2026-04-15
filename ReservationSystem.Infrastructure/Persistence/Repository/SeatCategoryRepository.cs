@@ -18,6 +18,14 @@ namespace ReservationSystem.Infrastructure.Persistence.Repository
             _db = db;
         }
 
+        public async Task<int> GetRemainigSeatAsync(Guid seatCategoryId, CancellationToken ct)
+        {
+            return await _db.SeatCategories
+                .Where(x => x.Id == seatCategoryId)
+                .Select(x => x.RemainingSeats)
+                .SingleAsync(ct);
+        }
+
         public async Task<bool> RestoreSeat(Dictionary<Guid, int> seatCategoryMap, CancellationToken ct)
         {
             foreach (var keyValue in seatCategoryMap)
