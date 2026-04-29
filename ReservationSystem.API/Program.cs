@@ -1,5 +1,6 @@
 
 using Microsoft.EntityFrameworkCore;
+using ReservationSystem.API.Worker;
 using ReservationSystem.Application.Handler.CreateReservation;
 using ReservationSystem.Application.Interfaces.Admission;
 using ReservationSystem.Application.Interfaces.Cache;
@@ -49,6 +50,8 @@ namespace ReservationSystem.API
 
                 return ConnectionMultiplexer.Connect(options);
             });
+
+            //builder.Services.AddHostedService<ExpirationWorker>();
 
             builder.Services.AddMediatR(cfg =>
             {

@@ -11,6 +11,6 @@ namespace ReservationSystem.Application.Interfaces.Cache
         Task SetAsync(Guid seatCategoryId, int quantity);
         Task<int?> GetRemainingAsync(Guid seatCategoryId);
         Task DecrementAsync(Guid seatCategoryId, int quantity);
-        Task SetZeroAsync(Guid seatCategoryId);
+        Task InvalidateAsync(Guid seatCategoryId);
     }
 }

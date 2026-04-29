@@ -45,12 +45,7 @@ namespace ReservationSystem.Application.Handler.CreateReservation
                 var actualRemainingSeat = await _seatRepo.GetRemainigSeatAsync(request.SeatCategoryId, cancellationToken);
 
                 // populate cache
-                try
-                {
-                    await _seatCache.SetAsync(request.SeatCategoryId, actualRemainingSeat);
-                }
-                catch { }
-
+                await _seatCache.SetAsync(request.SeatCategoryId, actualRemainingSeat);
                 cachedSeat = actualRemainingSeat;
             }
 
@@ -69,34 +64,25 @@ namespace ReservationSystem.Application.Handler.CreateReservation
                 {
                     await _uow.RollbackAsync(cancellationToken);
 
-                    //Wrap cache into trycatch so its a nonblocking opreation
-                    try
-                    {
-                        //Set cachedseat to 0 to reduce incoming request later
-                        await _seatCache.SetZeroAsync(request.SeatCategoryId);
-                    }
-                    catch { }
-                    
+                    //Set cachedseat to 0 to reduce incoming request later
+                    await _seatCache.InvalidateAsync(request.SeatCategoryId);
 
                     return Result<Guid>.Conflict("No seat available.");
                 }
 
                 //Create reservation after allocate seat success/available
-                Reservation reservation = new Reservation(request.SeatCategoryId, request.Quantity, DateTimeOffset.UtcNow.AddMinutes(3));
+                //Reservation reservation = new Reservation(request.SeatCategoryId, request.Quantity, DateTimeOffset.UtcNow.AddMinutes(3));
+                Reservation reservation = new Reservation(request.SeatCategoryId, request.Quantity, DateTimeOffset.UtcNow.AddSeconds(30)); //30s for testing purpose
+
+
                 await _rsvRepo.AddAsync(reservation, cancellationToken); //wheres my expiresat?
 
                 await _uow.CommitAsync(cancellationToken);
 
                 result = Result<Guid>.Success(reservation.Id);
 
-
-                //Wrap cache into trycatch so its a nonblocking opreation
-                try
-                {
-                    //Decrease cachedseat
-                    await _seatCache.DecrementAsync(request.SeatCategoryId, request.Quantity);
-                }
-                catch { }
+                //Decrease cachedseat
+                await _seatCache.DecrementAsync(request.SeatCategoryId, request.Quantity);
 
             }
             catch (DomainException ex)

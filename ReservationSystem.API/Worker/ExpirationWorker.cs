@@ -1,4 +1,5 @@
-﻿using ReservationSystem.Application.Interfaces.Repository;
+﻿using ReservationSystem.Application.Interfaces.Cache;
+using ReservationSystem.Application.Interfaces.Repository;
 using ReservationSystem.Application.Interfaces.UnitOfWork;
 
 namespace ReservationSystem.API.Worker
@@ -7,11 +8,13 @@ namespace ReservationSystem.API.Worker
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IUnitOfWork _uow;
+        private readonly ISeatCache _seatCache;
 
-        public ExpirationWorker(IServiceScopeFactory scopeFactory, IUnitOfWork uow)
+        public ExpirationWorker(IServiceScopeFactory scopeFactory, IUnitOfWork uow, ISeatCache seatCache)
         {
             _scopeFactory = scopeFactory;
             _uow = uow;
+            _seatCache = seatCache;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -48,6 +51,12 @@ namespace ReservationSystem.API.Worker
                         if (!restoreSeatResult) await _uow.RollbackAsync(stoppingToken);
 
                         await _uow.CommitAsync(stoppingToken);
+
+                        //Invalidate cache here, so later app can re-write it
+                        foreach (var seatCategoryId in seatCategoryRestoreMap.Keys)
+                        {
+                            await _seatCache.InvalidateAsync(seatCategoryId);
+                        }
                     }
                 }
                 catch
