@@ -2,6 +2,7 @@
 using ReservationSystem.Application.Common;
 using ReservationSystem.Application.Interfaces.Admission;
 using ReservationSystem.Application.Interfaces.Cache;
+using ReservationSystem.Application.Interfaces.Metric;
 using ReservationSystem.Application.Interfaces.Repository;
 using ReservationSystem.Application.Interfaces.UnitOfWork;
 using ReservationSystem.Domain.Entities;
@@ -22,17 +23,21 @@ namespace ReservationSystem.Application.Handler.CreateReservation
         private readonly IUnitOfWork _uow;
         private readonly ISeatCache _seatCache;
         private readonly ISeatRequestGate _seatRequestGate;
-        public CreateReservationHandler(IReservationRepository rsvRepo, ISeatCategoryRepository seatRepo, IUnitOfWork uow, ISeatCache seatCache, ISeatRequestGate seatRequestGate)
+        private readonly IReservationMetric _rsvMetric;
+        public CreateReservationHandler(IReservationRepository rsvRepo, ISeatCategoryRepository seatRepo, IUnitOfWork uow, ISeatCache seatCache, ISeatRequestGate seatRequestGate, IReservationMetric rsvMetric)
         {
             _rsvRepo = rsvRepo;
             _seatRepo = seatRepo;
             _uow = uow;
             _seatCache = seatCache;
             _seatRequestGate = seatRequestGate;
+            _rsvMetric = rsvMetric;
         }
 
         public async Task<Result<Guid>> Handle(CreateReservationCommand request, CancellationToken cancellationToken)
         {
+            _rsvMetric.IncreaseAttempt();
+
             Result<Guid> result = new();
             if (request.Quantity <= 0) return Result<Guid>.Invalid("Quantity cannot be less than 1.");
 
@@ -52,12 +57,15 @@ namespace ReservationSystem.Application.Handler.CreateReservation
             //Admission here to control how many request can comes in based on cachedseat
             if (!_seatRequestGate.Allow(cachedSeat))
             {
+                _rsvMetric.IncreaseCacheReject();
                 return Result<Guid>.TooManyRequest("Too many requests.");
             }
 
             await _uow.BeginAsync(cancellationToken);
             try
             {
+                _rsvMetric.IncreaseDbAttempt();
+
                 //Try to allocate seat, if not available return fail and rollback immediately
                 bool seatAvailable = await _seatRepo.TryAllocateSeatAsync(request.SeatCategoryId, request.Quantity, cancellationToken);
                 if (!seatAvailable)
@@ -79,8 +87,9 @@ namespace ReservationSystem.Application.Handler.CreateReservation
 
                 await _uow.CommitAsync(cancellationToken);
 
+                _rsvMetric.IncreaseSuccess();
                 result = Result<Guid>.Success(reservation.Id);
-
+                
                 //Decrease cachedseat
                 await _seatCache.DecrementAsync(request.SeatCategoryId, request.Quantity);
 

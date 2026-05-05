@@ -12,7 +12,7 @@ namespace Reservation.LoadGenerator
 
             var client = new HttpClient();
 
-            int totalRequests = 30;
+            int totalRequests = 300;
 
             var tasks = new List<Task<HttpResponseMessage>>();
 

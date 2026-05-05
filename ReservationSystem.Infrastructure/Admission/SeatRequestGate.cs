@@ -20,15 +20,13 @@ namespace ReservationSystem.Infrastructure.Admission
         {
             if (cachedSeats == null) return true;
 
-            if (cachedSeats > 10) return true;
+            //Convert into 1.0, 0.5, 0.1 etc. lets say cachedSeats = 50, then 50 / 100 = 0.5 > 50%. so 50% probability
+            var raw = cachedSeats.Value / 100.0;
 
-            if (cachedSeats > 0)
-            {
-                var probability = cachedSeats.Value / 10.0;
-                return _random.NextDouble() < probability;
-            }
+            var probability = Math.Clamp(raw * 0.6, 0.05, 0.9); //only allows 60% of raw value. so if cachedseat = 100, then probability is 100% * 0.6 (around 60%) can go in. (balanced filtering, not too aggressive, not too loose)
+            //var probability = Math.Clamp(raw * 0.3, 0.05, 0.9); //only allows 30% of raw value. aggressive filtering.
 
-            return _random.NextDouble() < 0.05;
+            return _random.NextDouble() < probability;
         }
     }
 }
