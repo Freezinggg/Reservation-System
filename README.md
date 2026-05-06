@@ -1,54 +1,116 @@
-## Reservation System
-Reservation System is a backend-only built as part of a self backend learning.
+# Reservation System
+
+Backend-only reservation system built as part of a self backend engineering learning journey.
 
 ## Overview
-This project implements a fixed-capacity event reservation system designed to prevent overselling under concurrent requests.
+
+This project implements a fixed-capacity event reservation/ticketing system designed to prevent overselling under concurrent traffic.
 
 The system focuses on:
-- Concurrency-safe seat allocation
-- Reservation lifecycle management
-- Expiration handling
+
+* Concurrency-safe seat allocation
+* Reservation lifecycle management
+* Background expiration handling
+* Admission control and traffic shaping
+* Observability under load and contention
 
 ## Core Concepts
-Reservation Lifecycle :
-  - Active > Confirmed
-  - Active > Expired
-  - Active > Cancelled
 
-Oversell Prevention :
-Overselling problem are prevented using atomical conditional update:
-  Query (Theoritically) ->
-    UPDATE SeatCategory
-    SET RemainingSeats = RemainingSeats - :quantity
-    WHERE Id = :categoryId
-    AND RemainingSeats >= :quantity;
+### Reservation Lifecycle
 
-Concurrency Boundary :
-The SeatCategory row acts as shared resource. All seat allocation contention are happening in this row  (hot row contention)
+```text
+Active -> Confirmed
+Active -> Expired
+Active -> Cancelled
+```
 
-Expiration Worker :
+### Oversell Prevention
+
+Overselling is prevented using atomic conditional updates at the database layer.
+
+Conceptually:
+
+```sql
+UPDATE SeatCategory
+SET RemainingSeats = RemainingSeats - :quantity
+WHERE Id = :categoryId
+AND RemainingSeats >= :quantity;
+```
+
+### Concurrency Boundary
+
+The `SeatCategory` row acts as a shared contention resource (hot row contention).
+
+Concurrent reservation requests compete on this boundary during high traffic scenarios.
+
+### Admission Control
+
+The system implements layered admission control to reduce unnecessary database pressure:
+
+```text
+Client
+  ↓
+Edge Rate Limiter
+  ↓
+Probabilistic Admission Gate
+  ↓
+Database
+```
+
+This helps:
+
+* Reduce sudden burst traffic
+* Reduce wasteful DB attempts
+* Preserve stable success rate near capacity
+
+### Expiration Worker & Snapshot Worker
+
 Reservations expire asynchronously using a background worker.
+Expired reservations restore reserved seat back into the system.
 
-Derived State:
-RemainingSeats = cached derived value. Reservation rows = source of truth
+Snapshot used to monitor how many attempts, DB attempts, cache reject, etc to monitor traffic.
 
 ## Architecture
-This system will follow this architecture (Onion):
-  1. Api -> HTTP endpoints
-  2. Application -> Use cases & logic
-  3. Domain -> Use cases and orchestration
-  4. Infrastructure -> Database, persistence and implementation
+
+This project follows Onion/Clean Architecture principles:
+
+```text
+API
+  → HTTP endpoints
+
+Application
+  → Use cases and logic
+
+Domain
+  → Business rules and invariants
+
+Infrastructure
+  → Database and implementation details (interface's implementation)
+```
 
 ## Tech Stack
-.NET
-EF Core
-PostgreSQL
 
-## Learning goals
+* .NET
+* ASP.NET Core
+* EF Core
+* PostgreSQL
+* Docker (for Redis)
+
+## Learning Goals
+
 This project explores:
-  - Database concurrency control
-  - Worker patterns
-  - Transactional boundaries
 
-## Note
-This is a learning project, so please expect some bug, minor changes, and inconsistent.
+* Database concurrency control
+* Transaction boundaries
+* Hot-row contention
+* Background worker patterns
+* Admission control
+* Rate limiting
+* Probabilistic traffic shaping
+* Operational observability under load
+
+## Notes
+
+This is a learning-focused project intended to explore real-world backend systems behavior under concurrency and pressure scenarios, expect some bugs and inconsistent updates.
+
+Some parts of the system may still change as the project evolves.
