@@ -10,6 +10,7 @@ namespace ReservationSystem.Application.Interfaces.Metric
     {
         void IncreaseAttempt();
         void IncreaseCacheReject();
+        void IncreaseRateLimitReject();
         void IncreaseDbAttempt();
         void IncreaseSuccess();
 
@@ -19,6 +20,7 @@ namespace ReservationSystem.Application.Interfaces.Metric
     public record Snapshot(
         long Attempts,
         long CacheReject,
+        long RateLimitReject,
         long DbAttempts,
         long Success
     );

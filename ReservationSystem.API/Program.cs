@@ -5,6 +5,7 @@ using ReservationSystem.API.Worker;
 using ReservationSystem.Application.Handler.CreateReservation;
 using ReservationSystem.Application.Interfaces.Admission;
 using ReservationSystem.Application.Interfaces.Cache;
+using ReservationSystem.Application.Interfaces.Limiter;
 using ReservationSystem.Application.Interfaces.Metric;
 using ReservationSystem.Application.Interfaces.Randomizer;
 using ReservationSystem.Application.Interfaces.Repository;
@@ -14,6 +15,7 @@ using ReservationSystem.Infrastructure.Connection;
 using ReservationSystem.Infrastructure.Observability;
 using ReservationSystem.Infrastructure.Persistence;
 using ReservationSystem.Infrastructure.Persistence.Repository;
+using ReservationSystem.Infrastructure.RateLimiter;
 using StackExchange.Redis;
 
 namespace ReservationSystem.API
@@ -39,6 +41,7 @@ namespace ReservationSystem.API
             builder.Services.AddScoped<IRandomizer, Randomizer>();
 
             builder.Services.AddSingleton<IReservationMetric, InMemoryReservationMetric>();
+            builder.Services.AddSingleton<IRateLimiter, InMemoryRateLimiter>();
 
             //Conn strings
             builder.Services.AddDbContext<AppDbContext>(options =>

@@ -24,6 +24,7 @@ namespace ReservationSystem.API.Services
                 [Snapshot]
                 attempts={snap.Attempts}
                 cache_reject={snap.CacheReject}
+                rate_limit_reject={snap.RateLimitReject}
                 db_attempts={snap.DbAttempts}
                 success={snap.Success}
                 conversion={(snap.DbAttempts == 0 ? 0 : (double)snap.Success / snap.DbAttempts):P}

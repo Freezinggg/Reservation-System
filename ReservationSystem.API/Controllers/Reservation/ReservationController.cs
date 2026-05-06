@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ReservationSystem.Application.Common;
 using ReservationSystem.Application.Handler.CreateReservation;
+using ReservationSystem.Application.Interfaces.Limiter;
+using ReservationSystem.Application.Interfaces.Metric;
 
 namespace ReservationSystem.API.Controllers.Reservation
 {
@@ -11,16 +13,27 @@ namespace ReservationSystem.API.Controllers.Reservation
     public class ReservationController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IReservationMetric _rsvMetric;
+        private readonly IRateLimiter _rateLimiter;
 
-        public ReservationController(IMediator mediator)
+        public ReservationController(IMediator mediator, IReservationMetric rsvMetric, IRateLimiter rateLimiter)
         {
             _mediator = mediator;
+            _rsvMetric = rsvMetric;
+            _rateLimiter = rateLimiter;
         }
 
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateReservationCommand command)
         {
+            if (!_rateLimiter.TryAllow(DateTime.UtcNow))
+            {
+                _rsvMetric.IncreaseRateLimitReject();
+                return StatusCode(429);
+            }
+            
+
             var result = await _mediator.Send(command);
             return result.Status switch
             {
